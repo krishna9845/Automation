@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Chat Application using StompJs</title>
+  <link type="text/css" rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div id="wrapper">
+  <ul>
+    <li>WebSocket Test with durable subscription and filters.</li>
+  </ul>
+
+  <div id="chatbox"></div>
+
+  <input name="usermsg" type="text" id="usermsg" size="63" title="usermsg"/>
+  <button name="submitmsg" id="submitmsg">Send</button>
+  <button name="disconnect" id="disconnect">Disconnect</button>
+</div>
+
+<!-- It is used for DOM manipulation, not mandatory to use stompjs -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+
+<!-- Include from CDN for better performance, alternatively you can locally copy as well -->
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0-beta2/bundles/stomp.umd.min.js"></script>
+
+
+<script type="application/javascript">
+  $(function () {
+    let stompClient;
+
+    const stompConfig = {
+      // Typically, login, passcode and vhost
+      // Adjust these for your broker
+      connectHeaders: {
+        'cleanSession': true,
+        'client-id': "TV-{{ client_id }}",
+        login: "cabintvapp",
+        passcode: "cabintvapp",
+      },
+
+
+      heartbeatIncoming: 60000, // Typical value 0 - disabled
+      heartbeatOutgoing: 60000,
+
+      // Broker URL, should start with ws:// or wss:// - adjust for your broker setup
+      //brokerURL: "wss://qa1-ace.decurtis.cloud/ws?wireFormat.maxInactivityDuration=0",
+      brokerURL: "ws://172.27.0.87:32557/ws",
+
+      // Keep it off for production, it can be quit verbose
+      // Skip this key to disable
+      debug: function (str) {
+        console.log('STOMP: ' + str);
+      },
+
+      // If disconnected, it will retry after 200ms
+      reconnectDelay: 200,
+
+      // Subscriptions should be done inside onConnect as those need to reinstated when the broker reconnects
+      onConnect: function (frame) {
+        //'selector': "stateRoom='z1234'"
+        // The return object has a method called `unsubscribe`
+        var headersChat = {'selector': "stateRoom='{{ client_id }}'",'activemq.prefetchSize': 1};
+        const subscription = stompClient.subscribe('/topic/dxp-qa1-ace-core.ship', function (message) {
+          const payload = JSON.parse(message.body);
+          displayIncomingMessage(payload.user, payload.usrMsg);
+        },headersChat);
+
+        var headersCabin= { 'selector': "stateRoom='{{ client_id }}' ",'activemq.prefetchSize': 1};
+         subscriptionCabin= stompClient.subscribe('/topic/dxp-qa1-ace-cabin-entertainment.tablet-tv', function (message) {
+          const payload = JSON.parse(message.body);
+          displayIncomingMessage(payload.user, payload.usrMsg);
+        },headersCabin);
+
+        var headersBroadcast = { 'activemq.prefetchSize': 1};
+         subscriptionBroadcast = stompClient.subscribe('/topic/dxp-qa1-ace-stateroomcontrol-vas.cabincontrols', function (message) {
+          const payload = JSON.parse(message.body);
+          displayIncomingMessage(payload.user, payload.usrMsg);
+        },headersBroadcast);
+
+        var headersCabin= { 'selector': "stateRoom='{{ client_id }}' ",'activemq.prefetchSize': 1};
+         subscriptionCabin= stompClient.subscribe('/topic/dxp-qa1-ace-guest-core.guest', function (message) {
+          const payload = JSON.parse(message.body);
+          displayIncomingMessage(payload.user, payload.usrMsg);
+        },headersCabin);
+
+        var headersCabin= { 'selector': "stateRoom='{{ client_id }}' ",'activemq.prefetchSize': 1};
+         subscriptionCabin= stompClient.subscribe('/topic/dxp-qa1-ace-batch-job.general-alarm', function (message) {
+          const payload = JSON.parse(message.body);
+          displayIncomingMessage(payload.user, payload.usrMsg);
+        },headersCabin);
+
+      }
+    };
+
+    // Create an instance
+    stompClient = new StompJs.Client(stompConfig);
+
+    // You can set additional configuration options here
+
+    // Attempt to connect
+    stompClient.activate();
+
+    // For the demo, set a random display user name for the chat, just feels nice
+    $("#username").val("User " + Math.round(Math.random() * 100));
+
+    // Set the DOM event handlers must not be inside onConnect - other for each reconnect it will keep getting added
+    $("#submitmsg").click(function () {
+      if (publishMessage($("#username").val(), $("#usermsg").val())) {
+        clearMessageInput();
+      }
+    });
+
+   $("#disconnect").click(function () {
+     subscription.close();
+     if (stompClient !== null) {
+        stompClient = null;
+        console.log('Disconnected');
+     } 
+   });
+
+    function clearMessageInput() {
+      $("#usermsg").val("");
+    }
+
+    function publishMessage(user, message) {
+      // trying to publish a message when the broker is not connected will throw an exception
+      if (!stompClient.connected) {
+        alert("Broker disconnected, can't send message.");
+        return false;
+      }
+      const d = new Date();
+      let expiration  = d.getMilliseconds() + 30000;
+
+      if (message.length > 0) {
+        const payLoad = {user: user, usrMsg: message};
+        var headersChat = {'JMSXGroupID': 'dev.ajay.chat.msg', 'JMSExpirartion': 1683549160000, 'stateRoom': 'z1234'} ;
+
+        // You can additionally pass headers
+        stompClient.publish({destination: '/queue/dev.dxp.private.jmstokafka.out', body: JSON.stringify(payLoad), headers:headersChat});
+      }
+      return true;
+    }
+
+    function displayIncomingMessage(user, message) {
+      const msgDiv = $("<div>").addClass("msgln");
+      msgDiv.html('<span class="msg">msg: </span><span class="message">' + message + '</span>');
+      $("#chatbox").append(msgDiv);
+    }
+  })
+</script>
+</body>
+</html>

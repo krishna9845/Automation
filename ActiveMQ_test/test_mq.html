@@ -1,0 +1,19 @@
+<html>
+<head>
+    <script>
+    var interval = 1000;
+    const client_list = {{client_list}};
+    const abs_path = window.location;
+    var path=window.location.pathname
+    new_path = path.replace('html_filesss/test_mq_balta.html', '')
+    client_list.forEach(function (x, index) {
+        setTimeout(function () {
+            window.open(new_path + `/html_files/output_${x}.html`);
+        }, index * interval);
+   });
+    </script>
+</head>
+<body>
+
+</body>
+</html>
