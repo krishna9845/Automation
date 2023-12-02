@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/automation-lib" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/automation-lib/automation-lib" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/automation-lib/master" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dxp-e2e-automation" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kk-e2e-automation" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/qa-automation" vcs="Git" />
+  </component>
+</project>
